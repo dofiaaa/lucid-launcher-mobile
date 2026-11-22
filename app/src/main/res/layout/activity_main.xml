@@ -89,6 +89,16 @@
             </FrameLayout>
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/widget_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp" />
+
         <GridView
             android:id="@+id/grid"
             android:layout_width="match_parent"

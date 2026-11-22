@@ -178,6 +178,7 @@ public class LauncherActivity extends Activity {
         emptyView = findViewById(R.id.empty);
         search = findViewById(R.id.search);
         searchPill = findViewById(R.id.search_pill);
+        widgetContainer = findViewById(R.id.widget_container);
         settingsBtn = findViewById(R.id.settings);
     }
 
@@ -219,12 +220,14 @@ public class LauncherActivity extends Activity {
         String query = q == null ? "" : q.trim().toLowerCase(Locale.getDefault());
         if (query.isEmpty()) {
             dock.setVisibility(View.VISIBLE);
+            widgetContainer.setVisibility(View.VISIBLE);
             emptyView.setVisibility(View.GONE);
             grid.setVisibility(View.VISIBLE);
             adapter.setApps(allApps);
             return;
         }
         dock.setVisibility(View.GONE);
+        widgetContainer.setVisibility(View.GONE);
         List<AppEntry> filtered = new ArrayList<>();
         for (AppEntry e : allApps) {
             if (e.label.toLowerCase(Locale.getDefault()).contains(query)
@@ -460,10 +463,6 @@ public class LauncherActivity extends Activity {
     // ---- Widgets ----
 
     private void buildWidgetArea() {
-        widgetContainer = new LinearLayout(this);
-        widgetContainer.setOrientation(LinearLayout.VERTICAL);
-        widgetContainer.setPadding(0, dp(4), 0, dp(4));
-        grid.addHeaderView(widgetContainer, null, false);
         addWidgetButton();
         restoreWidgets();
     }
