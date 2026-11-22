@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- стеклянная подложка -->
+    <path android:fillColor="#6FA8FF"
+        android:pathData="M24,0 L84,0 Q108,0 108,24 L108,84 Q108,108 84,108 L24,108 Q0,108 0,84 L0,24 Q0,0 24,0 Z" />
+    <!-- капля -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M54,20 C64,34 70,48 70,58 C70,69 63,76 54,76 C45,76 38,69 38,58 C38,48 44,34 54,20 Z" />
+    <!-- блик на капле -->
+    <path android:fillColor="#C9E0FF"
+        android:pathData="M46,40 a4,8 0 1 0 8,0 a4,8 0 1 0 -8,0 Z" />
+</vector>
