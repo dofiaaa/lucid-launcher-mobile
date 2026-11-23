@@ -133,10 +133,10 @@ fetch("https://api.github.com/repos/" + REPO + "/releases/latest")
     if (rel && rel.tag_name) {
       el.textContent = "Версия " + rel.tag_name + " · " + new Date(rel.published_at).toLocaleDateString("ru-RU");
     } else {
-      el.textContent = "Сборка с GitHub Actions (latest).";
+      el.textContent = "Выберите версию на странице релизов GitHub.";
     }
   })
-  .catch(function () { document.getElementById("dl-meta").textContent = "Сборка с GitHub Actions (latest)."; });
+  .catch(function () { document.getElementById("dl-meta").textContent = "Выберите версию на странице релизов GitHub."; });
 
 fetch("https://api.github.com/repos/" + REPO + "/commits?per_page=12")
   .then(function (r) { return r.json(); })
