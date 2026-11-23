@@ -27,7 +27,6 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -37,9 +36,11 @@ import android.widget.Toast;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -49,6 +50,20 @@ public class LauncherActivity extends Activity {
     private static final int APPWIDGET_HOST_ID = 1001;
     private static final int REQUEST_PICK_WIDGET = 7;
     private static final String ACTION_APPWIDGET_PICK = "android.appwidget.action.APPWIDGET_PICK";
+
+    private static class WidgetHolder {
+        final int id;
+        final int spanX;
+        final int spanY;
+        final AppWidgetHostView view;
+
+        WidgetHolder(int id, int spanX, int spanY, AppWidgetHostView view) {
+            this.id = id;
+            this.spanX = spanX;
+            this.spanY = spanY;
+            this.view = view;
+        }
+    }
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -60,9 +75,8 @@ public class LauncherActivity extends Activity {
 
     private FrameLayout root;
     private ImageView wallpaper;
-    private GridView grid;
+    private LauncherGrid grid;
     private LinearLayout dock;
-    private LinearLayout widgetContainer;
     private View header;
     private TextView clock;
     private TextView dateView;
@@ -70,18 +84,20 @@ public class LauncherActivity extends Activity {
     private EditText search;
     private ImageButton settingsBtn;
     private FrameLayout searchPill;
-    private TextView widgetAddButton;
 
-    private AppGridAdapter adapter;
     private List<AppEntry> allApps = new ArrayList<>();
+    private List<AppEntry> currentApps = new ArrayList<>();
     private List<AppEntry> dockApps = new ArrayList<>();
+    private final List<WidgetHolder> widgets = new ArrayList<>();
+    private final Map<String, AppCell> appCells = new HashMap<>();
+    private boolean searching = false;
 
     private boolean pendingInvalidate = false;
 
     private final Runnable invalidateGrid = new Runnable() {
         @Override public void run() {
             pendingInvalidate = false;
-            adapter.notifyDataSetChanged();
+            refreshIcons();
         }
     };
 
@@ -104,21 +120,8 @@ public class LauncherActivity extends Activity {
         setContentView(R.layout.activity_main);
         bindViews();
         applyInsets();
-
-        adapter = new AppGridAdapter(this);
-        buildWidgetArea();
         applyGlassTheme();
-        grid.setAdapter(adapter);
-
-        grid.setOnItemClickListener((parent, view, pos, id) -> {
-            Object tag = view.getTag();
-            if (tag instanceof AppEntry) launch((AppEntry) tag);
-        });
-        grid.setOnItemLongClickListener((parent, view, pos, id) -> {
-            Object tag = view.getTag();
-            if (tag instanceof AppEntry) showEntryMenu((AppEntry) tag);
-            return true;
-        });
+        restoreWidgets();
 
         settingsBtn.setOnClickListener(v -> showSettings());
         setupSearch();
@@ -165,7 +168,6 @@ public class LauncherActivity extends Activity {
         emptyView = findViewById(R.id.empty);
         search = findViewById(R.id.search);
         searchPill = findViewById(R.id.search_pill);
-        widgetContainer = findViewById(R.id.widget_container);
         settingsBtn = findViewById(R.id.settings);
     }
 
@@ -193,10 +195,7 @@ public class LauncherActivity extends Activity {
         });
         search.setOnEditorActionListener((v, actionId, ev) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_SEARCH) {
-                if (adapter.getCount() > 0) {
-                    Object o = adapter.getItem(0);
-                    if (o instanceof AppEntry) launch((AppEntry) o);
-                }
+                if (!currentApps.isEmpty()) launch(currentApps.get(0));
                 return true;
             }
             return false;
@@ -206,30 +205,31 @@ public class LauncherActivity extends Activity {
     private void applyFilter(String q) {
         String query = q == null ? "" : q.trim().toLowerCase(Locale.getDefault());
         if (query.isEmpty()) {
+            searching = false;
+            currentApps = allApps;
             dock.setVisibility(View.VISIBLE);
-            widgetContainer.setVisibility(View.VISIBLE);
             emptyView.setVisibility(View.GONE);
             grid.setVisibility(View.VISIBLE);
-            adapter.setApps(allApps);
-            return;
-        }
-        dock.setVisibility(View.GONE);
-        widgetContainer.setVisibility(View.GONE);
-        List<AppEntry> filtered = new ArrayList<>();
-        for (AppEntry e : allApps) {
-            if (e.label.toLowerCase(Locale.getDefault()).contains(query)
-                    || e.packageName.toLowerCase(Locale.getDefault()).contains(query)) {
-                filtered.add(e);
+        } else {
+            searching = true;
+            dock.setVisibility(View.GONE);
+            List<AppEntry> filtered = new ArrayList<>();
+            for (AppEntry e : allApps) {
+                if (e.label.toLowerCase(Locale.getDefault()).contains(query)
+                        || e.packageName.toLowerCase(Locale.getDefault()).contains(query)) {
+                    filtered.add(e);
+                }
+            }
+            currentApps = filtered;
+            if (filtered.isEmpty()) {
+                grid.setVisibility(View.INVISIBLE);
+                emptyView.setVisibility(View.VISIBLE);
+            } else {
+                grid.setVisibility(View.VISIBLE);
+                emptyView.setVisibility(View.GONE);
             }
         }
-        adapter.setApps(filtered);
-        if (filtered.isEmpty()) {
-            grid.setVisibility(View.INVISIBLE);
-            emptyView.setVisibility(View.VISIBLE);
-        } else {
-            grid.setVisibility(View.VISIBLE);
-            emptyView.setVisibility(View.GONE);
-        }
+        refreshGrid();
     }
 
     private void reloadApps() {
@@ -249,8 +249,8 @@ public class LauncherActivity extends Activity {
                 dockApps = dockList;
                 allApps = apps;
                 buildDock();
-                applyFilter(search.getText().toString());
                 pruneWidgets();
+                applyFilter(search.getText().toString());
             });
             for (AppEntry e : apps) {
                 if (e.iconBitmap == null) {
@@ -266,6 +266,51 @@ public class LauncherActivity extends Activity {
             pendingInvalidate = true;
             handler.postDelayed(invalidateGrid, 100);
         }
+    }
+
+    private void refreshIcons() {
+        for (int i = 0; i < grid.getChildCount(); i++) {
+            View v = grid.getChildAt(i);
+            if (v instanceof AppCell) {
+                AppCell c = (AppCell) v;
+                Object tag = c.getTag();
+                if (tag instanceof AppEntry) {
+                    AppEntry e = (AppEntry) tag;
+                    c.bind(e.label, e.iconBitmap);
+                }
+            }
+        }
+    }
+
+    private void refreshGrid() {
+        List<LauncherGrid.GridItem> items = new ArrayList<>();
+        if (!searching) {
+            for (WidgetHolder wh : widgets) {
+                items.add(new LauncherGrid.GridItem(wh.view, wh.spanX, wh.spanY));
+            }
+        }
+        for (AppEntry e : currentApps) {
+            AppCell cell = appCells.get(e.packageName);
+            if (cell == null) {
+                cell = new AppCell(this);
+                cell.setOnClickListener(v -> launch(e));
+                cell.setOnLongClickListener(v -> { showEntryMenu(e); return true; });
+                appCells.put(e.packageName, cell);
+            }
+            cell.bind(e.label, e.iconBitmap);
+            cell.setTag(e);
+            items.add(new LauncherGrid.GridItem(cell, 1, 1));
+        }
+        grid.setItems(items);
+        grid.post(() -> {
+            for (WidgetHolder wh : widgets) {
+                int w = wh.view.getWidth();
+                int h = wh.view.getHeight();
+                if (w > 0 && h > 0) {
+                    wh.view.updateAppWidgetSize(null, w, h, w, h);
+                }
+            }
+        });
     }
 
     private void buildDock() {
@@ -410,7 +455,6 @@ public class LauncherActivity extends Activity {
         int dockBg = glass ? R.drawable.glass_dock : R.drawable.dock_opaque;
         if (searchPill != null) searchPill.setBackgroundResource(pill);
         if (dock != null) dock.setBackgroundResource(dockBg);
-        if (widgetAddButton != null) widgetAddButton.setBackgroundResource(pill);
     }
 
     private void showAbout() {
@@ -449,37 +493,20 @@ public class LauncherActivity extends Activity {
 
     // ---- Widgets ----
 
-    private void buildWidgetArea() {
-        addWidgetButton();
-        restoreWidgets();
-    }
-
-    private void addWidgetButton() {
-        TextView btn = new TextView(this);
-        btn.setText(R.string.add_widget);
-        btn.setTextColor(0xCCFFFFFF);
-        btn.setTextSize(13);
-        btn.setGravity(Gravity.CENTER);
-        btn.setBackgroundResource(R.drawable.glass_pill);
-        btn.setContentDescription(getString(R.string.add_widget));
-        btn.setOnClickListener(v -> pickWidget());
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
-        lp.setMargins(dp(2), dp(6), dp(2), dp(10));
-        btn.setLayoutParams(lp);
-        widgetContainer.addView(btn);
-        widgetAddButton = btn;
-    }
-
     private void restoreWidgets() {
+        widgets.clear();
         for (String s : prefs.widgetIds()) {
             try {
                 int id = Integer.parseInt(s);
                 AppWidgetProviderInfo info = appWidgetManager.getAppWidgetInfo(id);
-                if (info != null) addWidgetView(id, info);
+                if (info != null) {
+                    AppWidgetHostView hv = appWidgetHost.createView(this, id, info);
+                    hv.setTag(id);
+                    hv.setOnLongClickListener(v -> { showWidgetMenu(id); return true; });
+                    widgets.add(new WidgetHolder(id, widgetSpanX(info), widgetSpanY(info), hv));
+                }
             } catch (NumberFormatException ignored) {}
         }
-        syncWidgetPrefs();
     }
 
     private void pickWidget() {
@@ -503,36 +530,15 @@ public class LauncherActivity extends Activity {
             if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
                 AppWidgetProviderInfo info = appWidgetManager.getAppWidgetInfo(id);
                 if (info != null) {
-                    addWidgetView(id, info);
+                    AppWidgetHostView hv = appWidgetHost.createView(this, id, info);
+                    hv.setTag(id);
+                    hv.setOnLongClickListener(v -> { showWidgetMenu(id); return true; });
+                    widgets.add(new WidgetHolder(id, widgetSpanX(info), widgetSpanY(info), hv));
                     syncWidgetPrefs();
+                    refreshGrid();
                 }
             }
         }
-    }
-
-    private void addWidgetView(int id, AppWidgetProviderInfo info) {
-        AppWidgetHostView hv = appWidgetHost.createView(this, id, info);
-        hv.setTag(id);
-
-        int w = widgetContainer.getWidth();
-        if (w <= 0) w = getResources().getDisplayMetrics().widthPixels - dp(28);
-        int h = widgetHeightPx(info);
-
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, h);
-        lp.setMargins(dp(2), dp(8), dp(2), dp(0));
-        hv.setLayoutParams(lp);
-        hv.updateAppWidgetSize(null, w, h, w, h);
-        hv.setOnLongClickListener(v -> { showWidgetMenu(id); return true; });
-
-        int insertAt = Math.max(0, widgetContainer.getChildCount() - 1);
-        widgetContainer.addView(hv, insertAt);
-    }
-
-    private int widgetHeightPx(AppWidgetProviderInfo info) {
-        int cells = Math.max(info.minHeight, 1);
-        int h = cells * dp(50) + dp(6);
-        return Math.min(Math.max(h, dp(64)), dp(200));
     }
 
     private void showWidgetMenu(final int id) {
@@ -566,44 +572,40 @@ public class LauncherActivity extends Activity {
 
     private void removeWidget(int id) {
         appWidgetHost.deleteAppWidgetId(id);
-        removeWidgetView(id);
-        syncWidgetPrefs();
-    }
-
-    private void removeWidgetView(int id) {
-        for (int i = widgetContainer.getChildCount() - 1; i >= 0; i--) {
-            View v = widgetContainer.getChildAt(i);
-            Object tag = v.getTag();
-            if (tag instanceof Integer && ((Integer) tag).intValue() == id) {
-                widgetContainer.removeViewAt(i);
-                break;
-            }
+        for (int i = widgets.size() - 1; i >= 0; i--) {
+            if (widgets.get(i).id == id) widgets.remove(i);
         }
+        syncWidgetPrefs();
+        refreshGrid();
     }
 
     private void pruneWidgets() {
         boolean changed = false;
-        for (int i = widgetContainer.getChildCount() - 1; i >= 0; i--) {
-            View v = widgetContainer.getChildAt(i);
-            Object tag = v.getTag();
-            if (tag instanceof Integer) {
-                int id = ((Integer) tag).intValue();
-                if (appWidgetManager.getAppWidgetInfo(id) == null) {
-                    widgetContainer.removeViewAt(i);
-                    changed = true;
-                }
+        for (int i = widgets.size() - 1; i >= 0; i--) {
+            WidgetHolder wh = widgets.get(i);
+            if (appWidgetManager.getAppWidgetInfo(wh.id) == null) {
+                widgets.remove(i);
+                changed = true;
             }
         }
-        if (changed) syncWidgetPrefs();
+        if (changed) {
+            syncWidgetPrefs();
+            refreshGrid();
+        }
     }
 
     private void syncWidgetPrefs() {
         Set<String> ids = new HashSet<>();
-        for (int i = 0; i < widgetContainer.getChildCount(); i++) {
-            Object tag = widgetContainer.getChildAt(i).getTag();
-            if (tag instanceof Integer) ids.add(String.valueOf(tag));
-        }
+        for (WidgetHolder wh : widgets) ids.add(String.valueOf(wh.id));
         prefs.setWidgetIds(ids);
+    }
+
+    private int widgetSpanX(AppWidgetProviderInfo info) {
+        return Math.min(Math.max(info.minWidth, 1), 4);
+    }
+
+    private int widgetSpanY(AppWidgetProviderInfo info) {
+        return Math.min(Math.max(info.minHeight, 1), 3);
     }
 
     private static String capitalize(String s) {

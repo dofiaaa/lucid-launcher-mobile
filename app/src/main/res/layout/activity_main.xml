@@ -89,33 +89,20 @@
             </FrameLayout>
         </LinearLayout>
 
-        <LinearLayout
-            android:id="@+id/widget_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingLeft="12dp"
-            android:paddingRight="12dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp" />
-
-        <GridView
-            android:id="@+id/grid"
+        <ScrollView
+            android:id="@+id/scroll"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:numColumns="4"
-            android:verticalSpacing="10dp"
-            android:horizontalSpacing="4dp"
-            android:paddingLeft="14dp"
-            android:paddingRight="14dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:listSelector="@android:color/transparent"
             android:scrollbars="none"
             android:overScrollMode="never"
-            android:cacheColorHint="#00000000"
-            android:divider="@null" />
+            android:fadingEdgeLength="0dp">
+
+            <com.lucid.launcher.LauncherGrid
+                android:id="@+id/grid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </ScrollView>
 
         <LinearLayout
             android:id="@+id/dock"
