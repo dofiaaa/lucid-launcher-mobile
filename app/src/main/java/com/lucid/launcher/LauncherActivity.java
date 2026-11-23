@@ -12,7 +12,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -24,8 +23,6 @@ import android.text.format.DateFormat;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
-import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
@@ -103,17 +100,7 @@ public class LauncherActivity extends Activity {
         appWidgetManager = AppWidgetManager.getInstance(this);
         appWidgetHost = new AppWidgetHost(this, APPWIDGET_HOST_ID);
 
-        Window w = getWindow();
-        w.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        w.setStatusBarColor(0x00000000);
-        w.setNavigationBarColor(0x30000000);
-        if (Build.VERSION.SDK_INT >= 23) {
-            w.getDecorView().setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
-        }
-
+        // Без полноэкранного режима: обычный статус-бар, контент не уходит под системные панели.
         setContentView(R.layout.activity_main);
         bindViews();
         applyInsets();
@@ -544,8 +531,8 @@ public class LauncherActivity extends Activity {
 
     private int widgetHeightPx(AppWidgetProviderInfo info) {
         int cells = Math.max(info.minHeight, 1);
-        int h = cells * dp(58) + dp(8);
-        return Math.min(Math.max(h, dp(80)), dp(320));
+        int h = cells * dp(50) + dp(6);
+        return Math.min(Math.max(h, dp(64)), dp(200));
     }
 
     private void showWidgetMenu(final int id) {
