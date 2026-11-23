@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lucid Launcher Mobile — лёгкий лаунчер для Android</title>
+<style>
+:root {
+  --accent: #6fa8ff;
+  --text: #eef3fb;
+  --muted: #aab6c8;
+  --card: rgba(255,255,255,0.07);
+  --card-border: rgba(255,255,255,0.12);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+  background: linear-gradient(160deg, #16202c 0%, #0b1018 45%, #101826 100%);
+  padding: 34px 16px 20px;
+}
+.bg {
+  position: fixed; inset: 0; z-index: -1;
+  background:
+    radial-gradient(800px 500px at 15% 0%, rgba(111,168,255,0.18), transparent 60%),
+    radial-gradient(700px 500px at 100% 100%, rgba(111,168,255,0.12), transparent 60%);
+}
+main { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+h1 { font-size: 40px; font-weight: 300; letter-spacing: 0.5px; line-height: 1.1; }
+.sub { color: var(--muted); font-size: 15px; line-height: 1.55; margin-top: 6px; }
+.badge {
+  display: inline-block; background: rgba(111,168,255,0.16); color: var(--accent);
+  padding: 4px 11px; border-radius: 999px; font-size: 12px; margin-bottom: 12px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 22px 24px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.card h2 { font-size: 20px; font-weight: 500; margin-bottom: 6px; }
+.card .lead { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+.btn {
+  display: inline-block; background: var(--accent); color: #0b1020;
+  text-decoration: none; padding: 13px 26px; border-radius: 14px;
+  font-weight: 600; font-size: 15px; border: none; cursor: pointer;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: rgba(255,255,255,0.08); color: var(--text); border: 1px solid var(--card-border); }
+.hint { color: var(--muted); font-size: 13px; margin-top: 12px; }
+label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+input, textarea {
+  width: 100%; background: rgba(0,0,0,0.28); border: 1px solid var(--card-border);
+  border-radius: 10px; color: var(--text); padding: 11px 13px; font-size: 14px;
+  font-family: inherit; outline: none;
+}
+input:focus, textarea:focus { border-color: var(--accent); }
+textarea { min-height: 90px; resize: vertical; }
+ul { list-style: none; display: flex; flex-direction: column; gap: 11px; }
+li { border-bottom: 1px solid var(--card-border); padding-bottom: 11px; }
+li:last-child { border-bottom: none; padding-bottom: 0; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.commit-msg { font-size: 14px; }
+.commit-date { color: var(--muted); font-size: 12px; margin-top: 3px; }
+footer { text-align: center; color: var(--muted); font-size: 13px; padding: 10px 0 20px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<main>
+
+  <div>
+    <span class="badge">📱 мобильная версия · Android 6.0+</span>
+    <h1>Lucid Launcher Mobile</h1>
+    <p class="sub">Лёгкий «стеклянный» лаунчер для телефона. Без AndroidX и лишних библиотек — только чистый Android framework на Java.</p>
+  </div>
+
+  <section class="card">
+    <h2>⬇ Скачать</h2>
+    <p class="lead">Последняя собранная версия APK прямо с GitHub.</p>
+    <a class="btn" id="dl"
+       href="https://github.com/dofiaaa/lucid-launcher-mobile/releases/latest/download/app-debug.apk">
+       Скачать APK
+    </a>
+    <p class="hint" id="dl-meta">Загружаю информацию о версии…</p>
+  </section>
+
+  <section class="card">
+    <h2>🐞 Сообщить о баге</h2>
+    <p class="lead">Опишите проблему — откроется новый issue в репозитории с заполненным описанием.</p>
+    <form id="bug">
+      <label for="what">Что произошло?</label>
+      <textarea id="what" required placeholder="Опишите проблему…"></textarea>
+
+      <label for="expect">Что ожидалось?</label>
+      <input id="expect" type="text" placeholder="Как должно было работать">
+
+      <label for="device">Устройство и Android</label>
+      <input id="device" type="text" placeholder="Например: Galaxy A5, Android 6.0">
+
+      <div style="margin-top: 16px;">
+        <button class="btn ghost" type="submit">Открыть GitHub issue →</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>🔄 Изменения</h2>
+    <p class="lead">Последние изменения в проекте.</p>
+    <ul id="commits"><li>Загружаю…</li></ul>
+    <p class="hint"><a href="https://github.com/dofiaaa/lucid-launcher-mobile/commits/main">Все коммиты →</a></p>
+  </section>
+
+  <footer>
+    <a href="https://github.com/dofiaaa/lucid-launcher-mobile">Исходный код на GitHub</a><br>
+    Lucid Launcher Mobile · версия для телефона
+  </footer>
+
+</main>
+<script>
+var REPO = "dofiaaa/lucid-launcher-mobile";
+var NL = String.fromCharCode(10);
+
+fetch("https://api.github.com/repos/" + REPO + "/releases/latest")
+  .then(function (r) { return r.ok ? r.json() : null; })
+  .then(function (rel) {
+    var el = document.getElementById("dl-meta");
+    if (rel && rel.tag_name) {
+      el.textContent = "Версия " + rel.tag_name + " · " + new Date(rel.published_at).toLocaleDateString("ru-RU");
+    } else {
+      el.textContent = "Сборка с GitHub Actions (latest).";
+    }
+  })
+  .catch(function () { document.getElementById("dl-meta").textContent = "Сборка с GitHub Actions (latest)."; });
+
+fetch("https://api.github.com/repos/" + REPO + "/commits?per_page=12")
+  .then(function (r) { return r.json(); })
+  .then(function (list) {
+    var ul = document.getElementById("commits");
+    if (!Array.isArray(list) || list.length === 0) { ul.innerHTML = "<li>Нет данных.</li>"; return; }
+    var html = "";
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      var msg = (c.commit && c.commit.message) ? c.commit.message.split(NL)[0] : "";
+      var date = new Date(c.commit.author.date).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+      html += "<li><div class="commit-msg">" + esc(msg) + "</div>" +
+              "<div class="commit-date">" + date + " · <a href="" + c.html_url + "">" + c.sha.slice(0, 7) + "</a></div></li>";
+    }
+    ul.innerHTML = html;
+  })
+  .catch(function () { document.getElementById("commits").innerHTML = "<li>Не удалось загрузить.</li>"; });
+
+document.getElementById("bug").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var what = document.getElementById("what").value.trim();
+  var expect = document.getElementById("expect").value.trim();
+  var device = document.getElementById("device").value.trim();
+  var title = "Баг: " + (what.slice(0, 60) || "описание");
+  var body = "### Что произошло" + NL + (what || "—") + NL + NL +
+             "### Что ожидалось" + NL + (expect || "—") + NL + NL +
+             "### Устройство" + NL + (device || "—");
+  var url = "https://github.com/" + REPO + "/issues/new?title=" + encodeURIComponent(title) + "&body=" + encodeURIComponent(body);
+  window.open(url, "_blank");
+});
+
+function esc(s) {
+  return s.replace(/[&<>"']/g, function (c) {
+    if (c === "&") return "&amp;";
+    if (c === "<") return "&lt;";
+    if (c === ">") return "&gt;";
+    if (c === '"') return "&quot;";
+    return "&#39;";
+  });
+}
+</script>
+</body>
+</html>
